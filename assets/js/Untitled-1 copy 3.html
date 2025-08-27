@@ -1,0 +1,102 @@
+<form id="ageForm" method="POST">
+  <input type="hidden" name="form_id" value="12">
+  <input type="hidden" name="action" value="sfb_submit">
+
+  <!-- Birthday -->
+  <div class="mb-3">
+    <label class="form-label">Birthday</label>
+    <div class="row">
+      <div class="col-3">
+        <select class="form-control" id="birthDay">
+          <option value="">Day</option>
+        </select>
+      </div>
+      <div class="col-5">
+        <select class="form-control" id="birthMonth">
+          <option value="">Month</option>
+        </select>
+      </div>
+      <div class="col-4">
+        <select class="form-control" id="birthYear">
+          <option value="">Year</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toggle container -->
+  <div class="p-2 border rounded mb-3" style="cursor:pointer;position: relative">
+    <!-- Clickable header -->
+    <div id="toggleAgeSection" style="font-weight:bold">
+      Calculate Age As Of (Optional)
+    </div>
+
+    <!-- Collapsible section inside same container -->
+    <div id="ageCalcSection"
+      style="margin-top:10px;padding:10px;border-top:1px solid #ccc;background:#f9f9f9;border-radius:4px">
+      <div class="mb-3">
+        <label class="form-label">Target Date</label>
+        <div class="row">
+          <div class="col-3">
+            <select class="form-control" id="targetDay">
+              <option value="">Day</option>
+            </select>
+          </div>
+          <div class="col-5">
+            <select class="form-control" id="targetMonth">
+              <option value="">Month</option>
+            </select>
+          </div>
+          <div class="col-4">
+            <select class="form-control" id="targetYear">
+              <option value="">Year</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Birth Time -->
+  <div class="mb-3">
+    <label class="form-label">Birth Time (Optional)</label>
+    <div class="row align-items-center">
+      <div class="col-2">
+        <select class="form-control" id="birthHour">
+          <option value="">HH</option>
+        </select>
+      </div>
+      <div class="col-2">
+        <select class="form-control" id="birthMinute">
+          <option value="">MM</option>
+        </select>
+      </div>
+      <div class="col-2 d-flex align-items-center">
+        <div class="form-check me-2">
+          <input class="form-check-input" type="radio" name="am_pm" id="am" value="AM">
+          <label class="form-check-label" for="am">AM</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="am_pm" id="pm" value="PM">
+          <label class="form-check-label" for="pm">PM</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timezone -->
+  <div class="mb-3">
+    <label class="form-label">Time Zone (Optional)</label>
+    <select class="form-control" id="timezone">
+      <option value="">Select Time Zone</option>
+    </select>
+  </div>
+
+  <!-- Calculated Age -->
+  <div class="mb-3">
+    <label class="form-label">Calculated Age</label>
+    <input type="text" class="form-control" id="calculatedAge">
+  </div>
+
+  <button type="submit" class="btn btn-primary">Calculate</button>
+</form>

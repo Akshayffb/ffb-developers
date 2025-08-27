@@ -1,0 +1,94 @@
+html,
+body {
+  overflow-x: hidden;
+}
+
+#ageCalcSection {
+  display: none;
+  margin-top: 40px;
+  padding: 10px;
+  border-top: 1px solid #ccc;
+  background: #f9f9f9;
+  border-radius: 4px;
+}
+
+#toggleAgeSection {
+  font-size: 16px;
+  margin: 0px;
+  cursor: pointer;
+  color: #6c757d;
+}
+
+.custom-age-cal {
+  background-color: #f9f9f9;
+  padding: 10px 15px;
+}
+
+.custom-age-cal legend,
+.birth-time-field legend,
+.birthday-field legend {
+  font-size: 16px;
+  margin: 0;
+}
+
+.birth-time-field select + label,
+.birthday-field select + label {
+  display: none;
+}
+
+.birth-time-field label:not(.am-pm label),
+.birthday-field label,
+.hide-label {
+  display: none;
+}
+
+.am-pm .form-check-input {
+  display: none;
+}
+
+.am-pm .form-check-label {
+  display: inline-block;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--e-global-color-primary);
+  background-color: #fff;
+  color: var(--e-global-color-primary);
+  cursor: pointer;
+  user-select: none;
+  text-align: center;
+  min-width: 50px;
+  transition: all 0.2s ease;
+}
+
+.am-pm .form-check-input:checked + .form-check-label {
+  background-color: var(--e-global-color-primary);
+  color: #fff;
+  border-color: var(--e-global-color-primary);
+}
+
+.age-calculator-form input,
+.age-calculator-form select {
+  padding: 10px 12px;
+  font-size: 1rem;
+}
+
+#ageForm .sfb-response {
+  display: none;
+}
+
+.result-container .age-result {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  justify-content: start;
+}
+
+.result-container .age-result .current-age p:last-child,
+.result-container .age-result .born-on p:last-child,
+.result-container .age-result .next-birth p:last-child,
+.result-container .age-result .total-age p:last-child {
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 500;
+  color: var(--e-global-color-primary);
+}

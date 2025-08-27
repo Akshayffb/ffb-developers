@@ -1,4 +1,130 @@
-body, html {
-    overflow-x: hidden;
-    scroll-behavior: smooth;
+body,
+html {
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+p {
+  margin: 0;
+}
+
+/* Header custom */
+.custom-header .header-inner,
+.custom-footer .footer-inner,
+.custom-header .header-inner .site-branding,
+.custom-footer .footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0px;
+}
+
+header.site-header {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.custom-header .header-inner .site-branding {
+  justify-content: flex-start;
+  gap: 15px;
+  flex-direction: row;
+}
+
+.custom-header .header-inner .site-logo {
+  width: 10%;
+}
+
+.custom-footer .footer-inner .site-logo {
+  width: 15%;
+}
+
+.custom-header .header-inner .site-branding {
+  width: 40%;
+}
+
+.custom-header .header-inner .site-navigation {
+  width: 55%;
+  justify-content: end;
+}
+
+.custom-header .site-info .site-title,
+.custom-footer .footer-branding .site-title {
+  font-size: 16px;
+}
+
+.custom-footer .footer-bottom {
+  justify-content: center;
+  padding: 20px;
+}
+
+.custom-footer .footer-branding {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.custom-footer .footer-inner {
+  border-bottom: 1px solid aliceblue;
+  padding: 0px 0px 20px 0px;
+}
+
+.mobile-menu-btn {
+  display: none;
+}
+
+@media only screen and (max-width: 768px) {
+  .custom-footer {
+    padding: 20px;
+  }
+
+  .custom-footer .footer-branding {
+    align-items: center;
+  }
+
+  .custom-footer .footer-inner {
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+  }
+
+  .custom-footer .footer-menu nav ul li a {
+    padding: 0px;
+  }
+  .custom-footer .footer-menu nav ul {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .custom-header .header-inner .site-branding {
+    width: 60%;
+  }
+
+  .custom-header .header-inner .site-logo {
+    width: 30%;
+  }
+
+  .site-navigation {
+    display: none;
+  }
+  .mobile-menu-btn {
+    display: block;
+    text-align: right;
+  }
+  .mobile-menu-btn .btn {
+    padding: 6px 10px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-size: 14px;
+    background-color: var(--e-global-color-accent);
+    color: #fff;
+    border-color: var(--e-global-color-accent);
+  }
+  .mobile-menu-btn .btn:hover {
+    background-color: var(--e-global-color-40f5588);
+    border-color: var(--e-global-color-40f5588);
+  }
+
+  .custom-header .site-info .site-title {
+    font-size: 14px;
+  }
 }
