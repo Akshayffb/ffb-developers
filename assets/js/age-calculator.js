@@ -201,116 +201,183 @@ $(document).ready(function () {
     return { years, months, days, hours, minutes, tz };
   }
 
-  function formatDuration(ms) {
-    let totalMinutes = Math.floor(ms / 60000);
-    let days = Math.floor(totalMinutes / (60 * 24));
-    let hours = Math.floor((totalMinutes % (60 * 24)) / 60);
-    let minutes = totalMinutes % 60;
-    return { days, hours, minutes };
+  // Next birthday diff (months, days, hours, minutes)
+  function calcDiffDetailed(from, to) {
+    let years = to.getFullYear() - from.getFullYear();
+    let months = to.getMonth() - from.getMonth();
+    let days = to.getDate() - from.getDate();
+    let hours = to.getHours() - from.getHours();
+    let minutes = to.getMinutes() - from.getMinutes();
+
+    if (minutes < 0) {
+      hours--;
+      minutes += 60;
+    }
+    if (hours < 0) {
+      days--;
+      hours += 24;
+    }
+    if (days < 0) {
+      months--;
+      let prevMonth = new Date(to.getFullYear(), to.getMonth(), 0);
+      days += prevMonth.getDate();
+    }
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+
+    return { years, months, days, hours, minutes };
   }
 
   let liveInterval;
   function displayAge() {
     clearInterval(liveInterval);
 
-    let age = calculateExactAge();
-    if (!age) {
+    // verify inputs
+    let ageCalc = calculateExactAge();
+    if (!ageCalc) {
       $ageField.val("");
       $resultContainer.html("<p>Please select a valid birthday.</p>");
       return;
     }
 
-    // Prepare base dates
-    let now = new Date();
+    // Helpers
+    function formatParts(parts) {
+      return (
+        parts
+          .filter(([val]) => val > 0)
+          .map(([val, label]) => `${val} ${label}${val > 1 ? "s" : ""}`)
+          .join(" ") || "0 minutes"
+      );
+    }
+
+    // birthDate in selected timezone (same as your code)
     let birthHour24 = to24Hour(
       $hour.val(),
       $amPm.filter(":checked").val() || "AM"
     );
     let birthMinute = parseInt($minute.val()) || 0;
+    let tz =
+      $timezone.val() || Intl.DateTimeFormat().resolvedOptions().timeZone;
     let birthDate = getDateInTimezone(
       parseInt($year.val()),
       parseInt($month.val()),
       parseInt($day.val()),
       birthHour24,
       birthMinute,
-      $timezone.val()
+      tz
     );
 
-    // Next birthday
-    let nextBirthday = new Date(
-      now.getFullYear(),
-      birthDate.getMonth(),
-      birthDate.getDate(),
-      birthDate.getHours(),
-      birthDate.getMinutes()
-    );
-    if (nextBirthday < now) nextBirthday.setFullYear(now.getFullYear() + 1);
+    // formatted DOB string
+    const userDob = new Date(
+      parseInt($year.val()),
+      parseInt($month.val()) - 1,
+      parseInt($day.val()),
+      birthHour24,
+      birthMinute
+    ).toLocaleString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+      timeZone: tz,
+    });
 
-    // Live update function
     function updateLive() {
       $("#result_image").hide();
       $resultContainer.show();
+
+      // CURRENT time (always fresh)
       let current = new Date();
-      let ageDiff = formatDuration(current - birthDate);
-      let nextBdayDiff = formatDuration(nextBirthday - current);
 
-      let totalMonths = Math.floor(
-        (current - birthDate) / (1000 * 60 * 60 * 24 * 30.44)
+      // format "as of" using the selected timezone so user can see which now we used
+      let asOf = current.toLocaleString("en-US", {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+        timeZone: tz,
+      });
+
+      // age using calendar-aware diff (use the same calcDiffDetailed you already added)
+      let ageDetailed = calcDiffDetailed(birthDate, current); // {years, months, days, hours, minutes, seconds}
+
+      // next birthday (recompute each tick so it stays accurate)
+      let nextBirthday = new Date(
+        current.getFullYear(),
+        birthDate.getMonth(),
+        birthDate.getDate(),
+        birthDate.getHours(),
+        birthDate.getMinutes(),
+        birthDate.getSeconds() || 0
       );
-      let totalDays = Math.floor((current - birthDate) / (1000 * 60 * 60 * 24));
-      let totalHours = Math.floor((current - birthDate) / (1000 * 60 * 60));
+      if (nextBirthday <= current)
+        nextBirthday.setFullYear(current.getFullYear() + 1);
+      let nextBdayDiff = calcDiffDetailed(current, nextBirthday);
 
+      // totals (exact)
+      let diffMs = current - birthDate;
+      let totalMinutes = Math.floor(diffMs / (1000 * 60));
+      let totalHours = Math.floor(diffMs / (1000 * 60 * 60));
+      let totalDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      let totalMonthsExact = ageDetailed.years * 12 + ageDetailed.months;
+
+      // Build HTML and hide zero parts
       let html = `
-    <div class="age-result">
-      <div class="current-age"><p>Your age is..</p>
-      <p> ${age.years} years ${age.months} months ${age.days} days 
-          ${ageDiff.hours} hours ${ageDiff.minutes} minutes
-          </p></div>
+      <div class="age-result">
+        <div class="as-of"><small>As of: ${asOf} (${tz})</small></div>
 
-      <div class="born-on"><p>You were born on..</p>
-      <p>
-          ${new Date(
-            parseInt($year.val()),
-            parseInt($month.val()) - 1,
-            parseInt($day.val()),
-            to24Hour($hour.val(), $amPm.filter(":checked").val() || "AM"),
-            parseInt($minute.val()) || 0
-          ).toLocaleString("en-US", {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-            year: "numeric",
-            hour: "numeric",
-            minute: "numeric",
-            hour12: true,
-          })}
-          </p>
+        <div class="current-age"><p>Your age is..</p>
+          <p>${formatParts([
+            [ageDetailed.years, "year"],
+            [ageDetailed.months, "month"],
+            [ageDetailed.days, "day"],
+            [ageDetailed.hours, "hour"],
+            [ageDetailed.minutes, "minute"],
+          ])}</p>
+        </div>
+
+        <div class="born-on"><p>You were born on..</p>
+          <p>${userDob}</p>
+        </div>
+
+        <div class="next-birth"><p>Your Next birthday in:</p>
+          <p>${formatParts([
+            [nextBdayDiff.years, "year"],
+            [nextBdayDiff.months, "month"],
+            [nextBdayDiff.days, "day"],
+            [nextBdayDiff.hours, "hour"],
+            [nextBdayDiff.minutes, "minute"],
+          ])}</p>
+        </div>
+
+        <div class="total-age"><p>Your total age in:</p>
+          <p>${formatParts([
+            [totalMonthsExact, "month"],
+            [totalDays, "day"],
+            [totalHours, "hour"],
+            [totalMinutes, "minute"],
+          ])}</p>
+        </div>
       </div>
-
-      <div class="next-birth">
-      <p>Your Next birthday in:</p> 
-      <p>
-        ${nextBdayDiff.days} days ${nextBdayDiff.hours} hours ${
-        nextBdayDiff.minutes
-      } minutes
-      </p>
-      </div>
-
-      <div class="total-age">
-      <p>Your total age in:</p> 
-      <p>
-        ${totalMonths} months, ${totalDays} days, ${totalHours} hours
-      </p></div>
-    </div>`;
+    `;
 
       $resultContainer.html(html);
       $ageField.val(
-        `${age.years} years, ${age.months} months, ${age.days} days`
+        `${ageDetailed.years} years, ${ageDetailed.months} months, ${ageDetailed.days} days`
       );
     }
 
     updateLive();
-    liveInterval = setInterval(updateLive, 60000);
+    liveInterval = setInterval(updateLive, 1000);
   }
 
   $("#toggleAgeSection").on("click", function () {
@@ -327,6 +394,13 @@ $(document).ready(function () {
       );
     }
   });
+
+  function formatParts(parts) {
+    return parts
+      .filter(([val, label]) => val > 0)
+      .map(([val, label]) => `${val} ${label}${val > 1 ? "s" : ""}`)
+      .join(" ");
+  }
 
   let today = new Date();
   $year.val(today.getFullYear());
