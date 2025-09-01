@@ -108,23 +108,40 @@ $(document).ready(function () {
   });
   $timezone.val(Intl.DateTimeFormat().resolvedOptions().timeZone);
 
+  // function getDateInTimezone(year, month, day, hour, minute, tz) {
+  //   const utcDate = new Date(year, month - 1, day, hour, minute);
+
+  //   const timeZone = tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  //   const formatter = new Intl.DateTimeFormat("en-US", {
+  //     timeZone,
+  //     year: "numeric",
+  //     month: "2-digit",
+  //     day: "2-digit",
+  //     hour: "2-digit",
+  //     minute: "2-digit",
+  //     second: "2-digit",
+  //     hour12: false,
+  //   });
+
+  //   return {
+  //     utcDate,
+  //     formatted: formatter.format(utcDate),
+  //     timeZone,
+  //   };
+  // }
+
   function getDateInTimezone(year, month, day, hour, minute, tz) {
-    console.log("getDateInTimezone called with:", {
-      year,
-      month,
-      day,
-      hour,
-      minute,
-      tz,
-    });
+    // Build a naive date string (YYYY-MM-DDTHH:mm)
+    const dateStr = `${year.toString().padStart(4, "0")}-${month
+      .toString()
+      .padStart(2, "0")}-${day.toString().padStart(2, "0")}T${hour
+      .toString()
+      .padStart(2, "0")}:${minute.toString().padStart(2, "0")}:00`;
 
-    // const utcDate = new Date(Date.UTC(year, month - 1, day, hour, minute));
-    const utcDate = new Date(year, month - 1, day, hour, minute);
-
-    const timeZone = tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
-
+    // Parse in the target timezone
     const formatter = new Intl.DateTimeFormat("en-US", {
-      timeZone,
+      timeZone: tz,
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -134,18 +151,25 @@ $(document).ready(function () {
       hour12: false,
     });
 
-    console.log("Generated UTC date:", utcDate, "Formatted:", formatter);
+    // Use formatToParts to extract components in UTC for this tz
+    const parts = formatter.formatToParts(new Date(dateStr));
+    let y = +parts.find((p) => p.type === "year").value;
+    let m = +parts.find((p) => p.type === "month").value - 1;
+    let d = +parts.find((p) => p.type === "day").value;
+    let h = +parts.find((p) => p.type === "hour").value;
+    let min = +parts.find((p) => p.type === "minute").value;
+    let s = +parts.find((p) => p.type === "second").value;
 
     return {
-      utcDate,
-      formatted: formatter.format(utcDate),
-      timeZone,
+      utcDate: new Date(Date.UTC(y, m, d, h, min, s)),
+      formatted: formatter.format(new Date(dateStr)),
+      timeZone: tz,
     };
   }
 
   function to24Hour(hourVal, ampm) {
     let h = parseInt(hourVal, 10) || 0;
-    console.log("Converting to 24-hour format:", hourVal, ampm);
+
     if (h === 12) return ampm === "AM" ? 0 : 12;
     if (ampm === "PM") return h + 12;
     return h;
@@ -156,15 +180,12 @@ $(document).ready(function () {
   }
 
   function calculateExactAge() {
-    console.log("calculateExactAge called");
     let day = parseInt($day.val());
     let month = parseInt($month.val());
     let year = parseInt($year.val());
     let amPm = $amPm.filter(":checked").val() || "AM";
     let hour = to24Hour($hour.val(), amPm);
     let minute = parseInt($minute.val()) || 0;
-
-    console.log("Birth inputs:", { day, month, year, hour, minute, amPm });
 
     if (!day || !month || !year) return null;
 
@@ -176,18 +197,8 @@ $(document).ready(function () {
     let targetHourVal = to24Hour($targetHour.val(), targetAmPm);
     let targetMinuteVal = parseInt($targetMinute.val()) || 0;
 
-    console.log("Target inputs:", {
-      targetDayVal,
-      targetMonthVal,
-      targetYearVal,
-      targetHourVal,
-      targetMinuteVal,
-    });
-
     let tz =
       $timezone.val() || Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-    console.log("Using timezone:", tz);
 
     let birthDate = getDateInTimezone(
       year,
@@ -206,15 +217,11 @@ $(document).ready(function () {
       tz
     ).utcDate;
 
-    console.log("BirthDate UTC:", birthDate, "TargetDate UTC:", targetDate);
-
     let years = targetDate.getFullYear() - birthDate.getFullYear();
     let months = targetDate.getMonth() - birthDate.getMonth();
     let days = targetDate.getDate() - birthDate.getDate();
     let hours = targetDate.getHours() - birthDate.getHours();
     let minutes = targetDate.getMinutes() - birthDate.getMinutes();
-
-    console.log("Raw diff:", { years, months, days, hours, minutes });
 
     if (minutes < 0) {
       hours--;
@@ -238,7 +245,6 @@ $(document).ready(function () {
       months += 12;
     }
 
-    console.log("Adjusted diff:", { years, months, days, hours, minutes });
     return { years, months, days, hours, minutes, tz };
   }
 
@@ -366,13 +372,8 @@ $(document).ready(function () {
         timeZone: tz,
       });
 
-      console.log("As of:", asOf);
-
-      // age using calendar-aware diff (use the same calcDiffDetailed you already added)
       let ageDetailed = calcDiffDetailed(birthDate, current);
-      console.log("ageDetailed:", ageDetailed);
 
-      // next birthday (recompute each tick so it stays accurate)
       let nextBirthday = new Date(
         current.getFullYear(),
         birthDate.getMonth(),
@@ -381,23 +382,45 @@ $(document).ready(function () {
         birthDate.getMinutes(),
         birthDate.getSeconds() || 0
       );
+
+      // Handle Feb 29 birthdays in non-leap years
+      if (birthDate.getMonth() === 1 && birthDate.getDate() === 29) {
+        // If not a leap year, celebrate on Feb 28
+        if (
+          !(
+            nextBirthday.getFullYear() % 4 === 0 &&
+            (nextBirthday.getFullYear() % 100 !== 0 ||
+              nextBirthday.getFullYear() % 400 === 0)
+          )
+        ) {
+          nextBirthday.setDate(28);
+        }
+      }
+
       if (nextBirthday.getTime() <= current.getTime()) {
         nextBirthday.setFullYear(current.getFullYear() + 1);
+
+        // Re-check for leap year after increment
+        if (birthDate.getMonth() === 1 && birthDate.getDate() === 29) {
+          if (
+            !(
+              nextBirthday.getFullYear() % 4 === 0 &&
+              (nextBirthday.getFullYear() % 100 !== 0 ||
+                nextBirthday.getFullYear() % 400 === 0)
+            )
+          ) {
+            nextBirthday.setDate(28);
+          }
+        }
       }
 
       let nextBdayDiff = calcDiffDetailed(current, nextBirthday);
-      console.log("nextBdayDiff:", nextBdayDiff);
 
-      // totals (exact)
       let diffMs = current - birthDate;
       let totalMinutes = Math.floor(diffMs / (1000 * 60));
       let totalHours = Math.floor(diffMs / (1000 * 60 * 60));
       let totalDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
       let totalMonthsExact = ageDetailed.years * 12 + ageDetailed.months;
-
-      $ageField.val(
-        `${ageDetailed.years} years, ${ageDetailed.months} months, ${ageDetailed.days} days`
-      );
 
       let html = `
   <div class="age-result">

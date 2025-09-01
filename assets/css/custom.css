@@ -71,6 +71,13 @@ header.site-header {
   display: none;
 }
 
+.responsive-clock {
+  width: 250px;
+  height: 250px;
+  max-width: 100%;
+  max-height: 100%;
+}
+
 @media only screen and (max-width: 768px) {
   .custom-footer {
     padding: 20px;

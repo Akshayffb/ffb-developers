@@ -20,6 +20,7 @@ function enqueue_scripts_styles()
 
     if (is_front_page()) {
         wp_enqueue_style('ffbdevelopers-age-calculator-style', get_script_path('/assets/css/age-calculator.css'), array(), get_version());
+        wp_enqueue_script('ffbdevelopers-clock-script', get_script_path('/assets/js/clock.js'), array('jquery'), get_version(), true);
         wp_enqueue_script('ffbdevelopers-age-calculator-script', get_script_path('/assets/js/age-calculator.js'), array('jquery'), get_version(), true);
     }
 }

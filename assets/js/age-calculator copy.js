@@ -118,11 +118,11 @@ $(document).ready(function () {
       tz,
     });
 
-    // const utcDate = new Date(Date.UTC(year, month - 1, day, hour, minute));
-    const utcDate = new Date(year, month - 1, day, hour, minute);
+    const utcDate = new Date(Date.UTC(year, month - 1, day, hour, minute));
 
     const timeZone = tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
 
+    // Use formatter only for display
     const formatter = new Intl.DateTimeFormat("en-US", {
       timeZone,
       year: "numeric",
@@ -134,7 +134,7 @@ $(document).ready(function () {
       hour12: false,
     });
 
-    console.log("Generated UTC date:", utcDate, "Formatted:", formatter);
+    console.log("Generated UTC date:", utcDate, "Formatted:", formatted);
 
     return {
       utcDate,
@@ -151,20 +151,13 @@ $(document).ready(function () {
     return h;
   }
 
-  function formatWithCommas(number) {
-    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  }
-
   function calculateExactAge() {
-    console.log("calculateExactAge called");
     let day = parseInt($day.val());
     let month = parseInt($month.val());
     let year = parseInt($year.val());
     let amPm = $amPm.filter(":checked").val() || "AM";
     let hour = to24Hour($hour.val(), amPm);
     let minute = parseInt($minute.val()) || 0;
-
-    console.log("Birth inputs:", { day, month, year, hour, minute, amPm });
 
     if (!day || !month || !year) return null;
 
@@ -176,19 +169,10 @@ $(document).ready(function () {
     let targetHourVal = to24Hour($targetHour.val(), targetAmPm);
     let targetMinuteVal = parseInt($targetMinute.val()) || 0;
 
-    console.log("Target inputs:", {
-      targetDayVal,
-      targetMonthVal,
-      targetYearVal,
-      targetHourVal,
-      targetMinuteVal,
-    });
-
     let tz =
       $timezone.val() || Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-    console.log("Using timezone:", tz);
-
+    // ✅ now correctly use utcDate for calculations
     let birthDate = getDateInTimezone(
       year,
       month,
@@ -206,15 +190,11 @@ $(document).ready(function () {
       tz
     ).utcDate;
 
-    console.log("BirthDate UTC:", birthDate, "TargetDate UTC:", targetDate);
-
     let years = targetDate.getFullYear() - birthDate.getFullYear();
     let months = targetDate.getMonth() - birthDate.getMonth();
     let days = targetDate.getDate() - birthDate.getDate();
     let hours = targetDate.getHours() - birthDate.getHours();
     let minutes = targetDate.getMinutes() - birthDate.getMinutes();
-
-    console.log("Raw diff:", { years, months, days, hours, minutes });
 
     if (minutes < 0) {
       hours--;
@@ -238,56 +218,35 @@ $(document).ready(function () {
       months += 12;
     }
 
-    console.log("Adjusted diff:", { years, months, days, hours, minutes });
     return { years, months, days, hours, minutes, tz };
   }
 
-  function calcDiffDetailed(birthDate, now) {
-    if (!(birthDate instanceof Date)) {
-      birthDate = new Date(birthDate);
-    }
+  // Next birthday diff (years, months, days, hours, minutes)
+  function calcDiffDetailed(from, to) {
+    console.log("from ", from);
+    console.log("to ", to);
+    let diffMs = to.getTime() - from.getTime();
+    console.log("diffMs ", diffMs);
+    if (diffMs < 0)
+      return { years: 0, months: 0, days: 0, hours: 0, minutes: 0 };
 
-    let years = now.getFullYear() - birthDate.getFullYear();
-    let months = now.getMonth() - birthDate.getMonth();
-    let days = now.getDate() - birthDate.getDate();
-    let hours = now.getHours() - birthDate.getHours();
-    let minutes = now.getMinutes() - birthDate.getMinutes();
-    let seconds = now.getSeconds() - birthDate.getSeconds();
+    let remaining = diffMs;
 
-    if (seconds < 0) {
-      seconds += 60;
-      minutes--;
-    }
+    const years = Math.floor(remaining / (1000 * 60 * 60 * 24 * 365.25));
+    remaining -= years * 1000 * 60 * 60 * 24 * 365.25;
 
-    if (minutes < 0) {
-      minutes += 60;
-      hours--;
-    }
+    const months = Math.floor(remaining / (1000 * 60 * 60 * 24 * 30.44));
+    remaining -= months * 1000 * 60 * 60 * 24 * 30.44;
 
-    if (hours < 0) {
-      hours += 24;
-      days--;
-    }
+    const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+    remaining -= days * 1000 * 60 * 60 * 24;
 
-    if (days < 0) {
-      let prevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-      days += prevMonth.getDate();
-      months--;
-    }
+    const hours = Math.floor(remaining / (1000 * 60 * 60));
+    remaining -= hours * 1000 * 60 * 60;
 
-    if (months < 0) {
-      months += 12;
-      years--;
-    }
+    const minutes = Math.floor(remaining / (1000 * 60));
 
-    return {
-      years,
-      months,
-      days,
-      hours,
-      minutes,
-      seconds,
-    };
+    return { years, months, days, hours, minutes };
   }
 
   let liveInterval;
@@ -352,8 +311,10 @@ $(document).ready(function () {
       $("#result_image").hide();
       $resultContainer.show();
 
+      // CURRENT time (always fresh)
       let current = new Date();
 
+      // format "as of" using the selected timezone so user can see which now we used
       let asOf = current.toLocaleString("en-US", {
         weekday: "short",
         year: "numeric",
@@ -366,11 +327,9 @@ $(document).ready(function () {
         timeZone: tz,
       });
 
-      console.log("As of:", asOf);
-
       // age using calendar-aware diff (use the same calcDiffDetailed you already added)
       let ageDetailed = calcDiffDetailed(birthDate, current);
-      console.log("ageDetailed:", ageDetailed);
+      // console.log("ageDetailed ", ageDetailed);
 
       // next birthday (recompute each tick so it stays accurate)
       let nextBirthday = new Date(
@@ -386,7 +345,7 @@ $(document).ready(function () {
       }
 
       let nextBdayDiff = calcDiffDetailed(current, nextBirthday);
-      console.log("nextBdayDiff:", nextBdayDiff);
+      // console.log("nextBdayDiff ", nextBdayDiff);
 
       // totals (exact)
       let diffMs = current - birthDate;
@@ -395,53 +354,45 @@ $(document).ready(function () {
       let totalDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
       let totalMonthsExact = ageDetailed.years * 12 + ageDetailed.months;
 
-      $ageField.val(
-        `${ageDetailed.years} years, ${ageDetailed.months} months, ${ageDetailed.days} days`
-      );
-
+      // Build HTML and hide zero parts
       let html = `
-  <div class="age-result">
-    <div class="as-of"><small>As of: ${asOf} (${tz})</small></div>
+      <div class="age-result">
+        <div class="as-of"><small>As of: ${asOf} (${tz})</small></div>
 
-    <div class="current-age"><p>Your age is..</p>
-      <p>${formatParts([
-        [ageDetailed.years, "year"],
-        [ageDetailed.months, "month"],
-        [ageDetailed.days, "day"],
-        [ageDetailed.hours, "hour"],
-        [ageDetailed.minutes, "minute"],
-      ])}</p>
-    </div>
+        <div class="current-age"><p>Your age is..</p>
+          <p>${formatParts([
+            [ageDetailed.years, "year"],
+            [ageDetailed.months, "month"],
+            [ageDetailed.days, "day"],
+            [ageDetailed.hours, "hour"],
+            [ageDetailed.minutes, "minute"],
+          ])}</p>
+        </div>
 
-    <div class="born-on"><p>You were born on..</p>
-      <p>${userDob}</p>
-    </div>
+        <div class="born-on"><p>You were born on..</p>
+          <p>${userDob}</p>
+        </div>
 
-    <div class="next-birth"><p>Your Next birthday in:</p>
-      <p>${formatParts([
-        [nextBdayDiff.years, "year"],
-        [nextBdayDiff.months, "month"],
-        [nextBdayDiff.days, "day"],
-        [nextBdayDiff.hours, "hour"],
-        [nextBdayDiff.minutes, "minute"],
-      ])}</p>
-    </div>
+        <div class="next-birth"><p>Your Next birthday in:</p>
+          <p>${formatParts([
+            [nextBdayDiff.years, "year"],
+            [nextBdayDiff.months, "month"],
+            [nextBdayDiff.days, "day"],
+            [nextBdayDiff.hours, "hour"],
+            [nextBdayDiff.minutes, "minute"],
+          ])}</p>
+        </div>
 
-    <div class="total-age"><p>Your total age in:</p>
-  <p>${[
-    [totalMonthsExact, "month"],
-    [totalDays, "day"],
-    [totalHours, "hour"],
-    [totalMinutes, "minute"],
-  ]
-    .filter(([val]) => val > 0)
-    .map(
-      ([val, label]) => `${formatWithCommas(val)} ${label}${val > 1 ? "s" : ""}`
-    )
-    .join(" ")}</p>
-  </div>
-  </div>
-`;
+        <div class="total-age"><p>Your total age in:</p>
+          <p>${formatParts([
+            [totalMonthsExact, "month"],
+            [totalDays, "day"],
+            [totalHours, "hour"],
+            [totalMinutes, "minute"],
+          ])}</p>
+        </div>
+      </div>
+    `;
 
       $resultContainer.html(html);
       $ageField.val(
@@ -467,6 +418,13 @@ $(document).ready(function () {
       );
     }
   });
+
+  function formatParts(parts) {
+    return parts
+      .filter(([val, label]) => val > 0)
+      .map(([val, label]) => `${val} ${label}${val > 1 ? "s" : ""}`)
+      .join(" ");
+  }
 
   let today = new Date();
   $year.val(today.getFullYear());

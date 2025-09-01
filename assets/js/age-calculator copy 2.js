@@ -151,10 +151,6 @@ $(document).ready(function () {
     return h;
   }
 
-  function formatWithCommas(number) {
-    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  }
-
   function calculateExactAge() {
     console.log("calculateExactAge called");
     let day = parseInt($day.val());
@@ -242,52 +238,31 @@ $(document).ready(function () {
     return { years, months, days, hours, minutes, tz };
   }
 
-  function calcDiffDetailed(birthDate, now) {
-    if (!(birthDate instanceof Date)) {
-      birthDate = new Date(birthDate);
-    }
+  function calcDiffDetailed(from, to) {
+    console.log("calcDiffDetailed called, from:", from, "to:", to);
+    let diffMs = to.getTime() - from.getTime();
 
-    let years = now.getFullYear() - birthDate.getFullYear();
-    let months = now.getMonth() - birthDate.getMonth();
-    let days = now.getDate() - birthDate.getDate();
-    let hours = now.getHours() - birthDate.getHours();
-    let minutes = now.getMinutes() - birthDate.getMinutes();
-    let seconds = now.getSeconds() - birthDate.getSeconds();
+    if (diffMs < 0)
+      return { years: 0, months: 0, days: 0, hours: 0, minutes: 0 };
 
-    if (seconds < 0) {
-      seconds += 60;
-      minutes--;
-    }
+    let remaining = diffMs;
 
-    if (minutes < 0) {
-      minutes += 60;
-      hours--;
-    }
+    const years = Math.floor(remaining / (1000 * 60 * 60 * 24 * 365.25));
+    remaining -= years * 1000 * 60 * 60 * 24 * 365.25;
 
-    if (hours < 0) {
-      hours += 24;
-      days--;
-    }
+    const months = Math.floor(remaining / (1000 * 60 * 60 * 24 * 30.44));
+    remaining -= months * 1000 * 60 * 60 * 24 * 30.44;
 
-    if (days < 0) {
-      let prevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-      days += prevMonth.getDate();
-      months--;
-    }
+    const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+    remaining -= days * 1000 * 60 * 60 * 24;
 
-    if (months < 0) {
-      months += 12;
-      years--;
-    }
+    const hours = Math.floor(remaining / (1000 * 60 * 60));
+    remaining -= hours * 1000 * 60 * 60;
 
-    return {
-      years,
-      months,
-      days,
-      hours,
-      minutes,
-      seconds,
-    };
+    const minutes = Math.floor(remaining / (1000 * 60));
+
+    console.log("Detailed diff:", { years, months, days, hours, minutes });
+    return { years, months, days, hours, minutes };
   }
 
   let liveInterval;
@@ -349,11 +324,15 @@ $(document).ready(function () {
     });
 
     function updateLive() {
+      console.log("updateLive tick");
+
       $("#result_image").hide();
       $resultContainer.show();
 
+      // CURRENT time (always fresh)
       let current = new Date();
 
+      // format "as of" using the selected timezone so user can see which now we used
       let asOf = current.toLocaleString("en-US", {
         weekday: "short",
         year: "numeric",
@@ -394,54 +373,55 @@ $(document).ready(function () {
       let totalHours = Math.floor(diffMs / (1000 * 60 * 60));
       let totalDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
       let totalMonthsExact = ageDetailed.years * 12 + ageDetailed.months;
-
+      console.log("Totals:", {
+        totalMinutes,
+        totalHours,
+        totalDays,
+        totalMonthsExact,
+      });
       $ageField.val(
         `${ageDetailed.years} years, ${ageDetailed.months} months, ${ageDetailed.days} days`
       );
 
+      // Build HTML and hide zero parts
       let html = `
-  <div class="age-result">
-    <div class="as-of"><small>As of: ${asOf} (${tz})</small></div>
+      <div class="age-result">
+        <div class="as-of"><small>As of: ${asOf} (${tz})</small></div>
 
-    <div class="current-age"><p>Your age is..</p>
-      <p>${formatParts([
-        [ageDetailed.years, "year"],
-        [ageDetailed.months, "month"],
-        [ageDetailed.days, "day"],
-        [ageDetailed.hours, "hour"],
-        [ageDetailed.minutes, "minute"],
-      ])}</p>
-    </div>
+        <div class="current-age"><p>Your age is..</p>
+          <p>${formatParts([
+            [ageDetailed.years, "year"],
+            [ageDetailed.months, "month"],
+            [ageDetailed.days, "day"],
+            [ageDetailed.hours, "hour"],
+            [ageDetailed.minutes, "minute"],
+          ])}</p>
+        </div>
 
-    <div class="born-on"><p>You were born on..</p>
-      <p>${userDob}</p>
-    </div>
+        <div class="born-on"><p>You were born on..</p>
+          <p>${userDob}</p>
+        </div>
 
-    <div class="next-birth"><p>Your Next birthday in:</p>
-      <p>${formatParts([
-        [nextBdayDiff.years, "year"],
-        [nextBdayDiff.months, "month"],
-        [nextBdayDiff.days, "day"],
-        [nextBdayDiff.hours, "hour"],
-        [nextBdayDiff.minutes, "minute"],
-      ])}</p>
-    </div>
+        <div class="next-birth"><p>Your Next birthday in:</p>
+          <p>${formatParts([
+            [nextBdayDiff.years, "year"],
+            [nextBdayDiff.months, "month"],
+            [nextBdayDiff.days, "day"],
+            [nextBdayDiff.hours, "hour"],
+            [nextBdayDiff.minutes, "minute"],
+          ])}</p>
+        </div>
 
-    <div class="total-age"><p>Your total age in:</p>
-  <p>${[
-    [totalMonthsExact, "month"],
-    [totalDays, "day"],
-    [totalHours, "hour"],
-    [totalMinutes, "minute"],
-  ]
-    .filter(([val]) => val > 0)
-    .map(
-      ([val, label]) => `${formatWithCommas(val)} ${label}${val > 1 ? "s" : ""}`
-    )
-    .join(" ")}</p>
-  </div>
-  </div>
-`;
+        <div class="total-age"><p>Your total age in:</p>
+          <p>${formatParts([
+            [totalMonthsExact, "month"],
+            [totalDays, "day"],
+            [totalHours, "hour"],
+            [totalMinutes, "minute"],
+          ])}</p>
+        </div>
+      </div>
+    `;
 
       $resultContainer.html(html);
       $ageField.val(
@@ -459,6 +439,7 @@ $(document).ready(function () {
 
   $("#ageForm").on("submit", function (e) {
     e.preventDefault();
+    console.log("Form submitted");
     displayAge();
     if ($resultContainer.length) {
       $("html, body").animate(
@@ -468,7 +449,15 @@ $(document).ready(function () {
     }
   });
 
+  function formatParts(parts) {
+    return parts
+      .filter(([val, label]) => val > 0)
+      .map(([val, label]) => `${val} ${label}${val > 1 ? "s" : ""}`)
+      .join(" ");
+  }
+
   let today = new Date();
+  console.log("Setting default inputs:", today);
   $year.val(today.getFullYear());
   $month.val(today.getMonth() + 1);
   $day.val(today.getDate());
