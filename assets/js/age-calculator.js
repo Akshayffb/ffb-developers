@@ -12,7 +12,6 @@ $(document).ready(function () {
     $hour = $("#birthHour"),
     $minute = $("#birthMinute"),
     $amPm = $("input[name='am_pm']"),
-    $timezone = $("#timezone"),
     $targetHour = $("#targetHour"),
     $targetMinute = $("#targetMinute"),
     $target_am_pm = $("input[name='target_am_pm']"),
@@ -91,44 +90,6 @@ $(document).ready(function () {
       )
     );
 
-  // ========================
-  // Timezones
-  // ========================
-  const tzList = Intl.supportedValuesOf
-    ? Intl.supportedValuesOf("timeZone")
-    : [];
-  tzList.forEach((tz) => {
-    const now = new Date();
-    const parts = new Intl.DateTimeFormat("en-US", {
-      timeZone: tz,
-      timeZoneName: "shortOffset",
-    }).formatToParts(now);
-    const offset = parts.find((p) => p.type === "timeZoneName").value;
-    $timezone.append(`<option value="${tz}">${tz} (${offset})</option>`);
-  });
-  $timezone.val(Intl.DateTimeFormat().resolvedOptions().timeZone);
-
-  // ========================
-  // Utility functions
-  // ========================
-  function getDateInTimezone(year, month, day, hour, minute, tz) {
-    const utcDate = new Date(year, month - 1, day, hour, minute);
-    const timeZone = tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-    const formatter = new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    });
-
-    return { utcDate, formatted: formatter.format(utcDate), timeZone };
-  }
-
   function to24Hour(hourVal, ampm) {
     let h = parseInt(hourVal, 10) || 0;
     if (h === 12) return ampm === "AM" ? 0 : 12;
@@ -158,25 +119,14 @@ $(document).ready(function () {
     const targetHour = to24Hour($targetHour.val(), targetAmPm);
     const targetMinute = +$targetMinute.val() || 0;
 
-    const tz =
-      $timezone.val() || Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-    const birthDate = getDateInTimezone(
-      year,
-      month,
-      day,
-      hour,
-      minute,
-      tz
-    ).utcDate;
-    const targetDate = getDateInTimezone(
+    const birthDate = new Date(year, month - 1, day, hour, minute);
+    const targetDate = new Date(
       targetYear,
-      targetMonth,
+      targetMonth - 1,
       targetDay,
       targetHour,
-      targetMinute,
-      tz
-    ).utcDate;
+      targetMinute
+    );
 
     let years = targetDate.getFullYear() - birthDate.getFullYear();
     let months = targetDate.getMonth() - birthDate.getMonth();
@@ -205,7 +155,7 @@ $(document).ready(function () {
       months += 12;
     }
 
-    return { years, months, days, hours, minutes, tz };
+    return { years, months, days, hours, minutes };
   }
 
   function calcDiffDetailed(fromDate, toDate) {
@@ -252,7 +202,6 @@ $(document).ready(function () {
   let liveTimer = null;
   let savedBirthDate = null;
   let savedUserDob = "";
-  let savedTz = "";
 
   function displayAge() {
     const ageCalc = calculateExactAge();
@@ -273,25 +222,16 @@ $(document).ready(function () {
     );
 
     const birthMinute = +$minute.val() || 0;
-    savedTz =
-      $timezone.val() || Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-    savedBirthDate = getDateInTimezone(
-      +$year.val(),
-      +$month.val(),
-      +$day.val(),
-      birthHour24,
-      birthMinute,
-      savedTz
-    ).utcDate;
-
-    savedUserDob = new Date(
+    savedBirthDate = new Date(
       +$year.val(),
       +$month.val() - 1,
       +$day.val(),
       birthHour24,
       birthMinute
-    ).toLocaleString("en-US", {
+    );
+
+    savedUserDob = savedBirthDate.toLocaleString("en-US", {
       weekday: "long",
       month: "long",
       day: "numeric",
@@ -299,7 +239,6 @@ $(document).ready(function () {
       hour: "numeric",
       minute: "numeric",
       hour12: true,
-      timeZone: savedTz,
     });
 
     function updateLive() {
